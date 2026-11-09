@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clans</title>
+<style>
+:root{--bg:#070b1a;--ink:#eaf1ff;--mut:#8b97b8;--ember:#ff7a2f;--ice:#4de1ff;--card:rgba(18,26,52,.72);--line:rgba(120,150,255,.22);--mine:#0f5c4a;--other:#1a2448}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:radial-gradient(1200px 700px at 50% -10%,#16225a 0%,var(--bg) 60%);color:var(--ink);font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;overflow:hidden}
+canvas{position:fixed;inset:0;z-index:0}
+.view{position:fixed;inset:0;z-index:1;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:18px}
+.view.on{display:flex}
+h1{font-size:clamp(3.4rem,16vw,7.5rem);letter-spacing:.04em;font-weight:900;background:linear-gradient(100deg,var(--ember),#ffd27a 30%,var(--ice) 60%,var(--ember) 90%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 6s linear infinite;filter:drop-shadow(0 0 24px rgba(255,122,47,.35))}
+@keyframes sheen{to{background-position:-250% 0}}
+.big{width:min(86vw,360px);padding:20px;border:1px solid var(--line);border-radius:16px;font:inherit;font-size:1.25rem;font-weight:700;color:var(--ink);background:var(--card);cursor:pointer;transition:transform .15s,box-shadow .25s,border-color .25s;backdrop-filter:blur(8px)}
+.big:hover,.big:focus-visible{transform:translateY(-3px) scale(1.02);border-color:var(--ember);box-shadow:0 0 0 1px var(--ember),0 12px 40px rgba(255,122,47,.3);outline:none}
+.big.alt:hover,.big.alt:focus-visible{border-color:var(--ice);box-shadow:0 0 0 1px var(--ice),0 12px 40px rgba(77,225,255,.28)}
+.big:active{transform:scale(.97)}
+.panel{width:min(92vw,400px);background:var(--card);border:1px solid var(--line);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:12px;backdrop-filter:blur(10px)}
+.panel h2{font-size:1.5rem}
+input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:#0b1230;color:var(--ink);font:inherit;font-size:1.05rem}
+input:focus{outline:2px solid var(--ice);outline-offset:1px}
+.go{padding:14px;border:0;border-radius:12px;font:inherit;font-weight:800;font-size:1.05rem;cursor:pointer;color:#1b0d00;background:linear-gradient(90deg,var(--ember),#ffb347)}
+.go.ice{color:#001a22;background:linear-gradient(90deg,var(--ice),#9af0ff)}
+.back{background:none;border:0;color:var(--mut);font:inherit;cursor:pointer;padding:6px}
+.err{color:#ff6b6b;min-height:1.3em;font-size:.95rem}
+#chat,#spy{justify-content:flex-start;padding:0;gap:0}
+.top{width:100%;display:flex;align-items:center;gap:8px;padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;background:#0d1535;border-bottom:1px solid var(--line)}
+.top .t{flex:1;font-weight:800}
+.top button{border:1px solid var(--line);background:none;color:var(--ink);border-radius:10px;padding:8px 12px;font:inherit;cursor:pointer}
+.msgs{flex:1;width:100%;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:6px;max-width:760px}
+.m{max-width:80%;padding:8px 12px;border-radius:14px;background:var(--other);align-self:flex-start;overflow-wrap:anywhere}
+.m.me{background:var(--mine);align-self:flex-end}
+.m b{display:block;font-size:.78rem;color:var(--ice);margin-bottom:2px}
+.m i{display:block;font-size:.68rem;color:var(--mut);text-align:right;font-style:normal;margin-top:2px}
+.sys{align-self:center;font-size:.8rem;color:var(--mut);background:rgba(255,255,255,.05);padding:4px 12px;border-radius:99px}
+.send{width:100%;max-width:760px;display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+.send button{padding:0 20px;border:0;border-radius:12px;font-weight:800;background:var(--ember);cursor:pointer}
+.fl{position:fixed;z-index:5;left:16px;padding:10px 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer;backdrop-filter:blur(8px)}
+#adminBtn{bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+#langBtn{bottom:calc(66px + env(safe-area-inset-bottom,0px))}
+#seeBtn{left:auto;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));border-color:var(--ember);color:var(--ember);font-weight:800}
+.layer{position:fixed;inset:0;background:rgba(4,7,18,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center}
+.layer.on{display:flex}
+#adminLayer,#langLayer{z-index:6}
+#gameLayer{z-index:7}
+.x{font-size:2.4rem;line-height:1;color:#ff2d2d;background:none;border:0;cursor:pointer;font-weight:900}
+.clist{width:min(92vw,420px);display:flex;flex-direction:column;gap:10px;max-height:60vh;overflow:auto}
+.clist button,.opt{padding:14px;border-radius:12px;border:1px solid var(--line);background:#0b1230;color:var(--ink);font:inherit;font-size:1.05rem;font-weight:700;cursor:pointer;width:min(80vw,300px)}
+.clist button{text-align:left}
+.clist button:hover,.opt:hover{border-color:var(--ember)}
+.gb{display:flex;flex-direction:column;align-items:center;gap:14px}
+.board{display:grid;grid-template-columns:repeat(3,min(26vw,92px));gap:8px}
+.cell{aspect-ratio:1;border-radius:14px;border:1px solid var(--line);background:#0b1230;color:var(--ink);font-size:2.4rem;font-weight:900;cursor:pointer}
+.cell.X{color:var(--ember)}.cell.O{color:var(--ice)}
+.rps{display:flex;gap:12px}
+.rps .opt{width:84px;font-size:2.2rem;padding:12px}
+#toast{position:fixed;z-index:9;top:18px;left:50%;transform:translate(-50%,-80px);background:var(--ice);color:#001a22;padding:10px 18px;border-radius:99px;font-weight:800;transition:transform .35s}
+#toast.on{transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){h1{animation:none}.big,#toast{transition:none}}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+
+<section class="view on" id="home">
+  <h1>Clans</h1>
+  <button class="big" data-go="create" data-i="create"></button>
+  <button class="big alt" data-go="search" data-i="search"></button>
+</section>
+
+<section class="view" id="create">
+  <div class="panel">
+    <h2 data-i="create"></h2>
+    <input id="cName" data-ph="namePh" maxlength="30" autocomplete="off">
+    <input id="cPass" data-ph="passPh" inputmode="numeric" autocomplete="off">
+    <div class="err" id="cErr"></div>
+    <button class="go" id="cGo" data-i="build"></button>
+    <button class="back" data-go="home" data-i="back"></button>
+  </div>
+</section>
+
+<section class="view" id="search">
+  <div class="panel">
+    <h2 data-i="search"></h2>
+    <input id="sName" data-ph="namePh" maxlength="30" autocomplete="off">
+    <input id="sPass" data-ph="passPh2" inputmode="numeric" autocomplete="off">
+    <div class="err" id="sErr"></div>
+    <button class="go ice" id="sGo" data-i="join"></button>
+    <button class="back" data-go="home" data-i="back"></button>
+  </div>
+</section>
+
+<section class="view" id="chat">
+  <div class="top"><div class="t" id="cTitle"></div><button id="gameBtn" data-i="game"></button><button id="leave" data-i="leave"></button></div>
+  <div class="msgs" id="cMsgs"></div>
+  <form class="send" id="cForm"><input id="cText" data-ph="msgPh" autocomplete="off" maxlength="2000"><button data-i="send"></button></form>
+</section>
+
+<section class="view" id="spy">
+  <div class="top"><div class="t" id="spyTitle"></div><button id="spyOut" data-i="exit"></button></div>
+  <div class="msgs" id="spyMsgs"></div>
+</section>
+
+<div class="layer" id="adminLayer">
+  <button class="x" id="adminX">✕</button>
+  <div style="font-weight:800;font-size:1.2rem" data-i="enterPass"></div>
+  <input id="aPass" type="password" data-ph="adminPh" style="max-width:300px" autocomplete="off">
+  <div class="err" id="aErr"></div>
+  <button class="go" id="aGo" style="width:300px;max-width:100%" data-i="login"></button>
+</div>
+
+<div class="layer" id="langLayer" style="z-index:6">
+  <button class="x" id="langX">✕</button>
+  <div class="clist" id="langList"></div>
+</div>
+
+<div class="layer" id="adminList" style="z-index:5">
+  <h2 data-i="activeClans"></h2>
+  <div class="clist" id="clist"></div>
+  <button class="back" id="listBack" data-i="close"></button>
+</div>
+
+<div class="layer" id="gameLayer">
+  <button class="x" id="gameX" style="position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:16px">✕</button>
+  <div class="gb" id="gBody"></div>
+</div>
+
+<button class="fl" id="langBtn" data-i="language"></button>
+<button class="fl" id="adminBtn" data-i="admin"></button>
+<button class="fl" id="seeBtn" data-i="seeClans" style="display:none"></button>
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+var KEY="clans_v1",ADMIN_PASS="qWaS1290";
+var CODES=["en","tr","fr","de","es","ru"],NAMES=["English","Türkçe","Français","Deutsch","Español","Русский"];
+/* sıra: en, tr, fr, de, es, ru */
+var T={
+create:["Create Clan","Klan Oluştur","Créer un clan","Clan erstellen","Crear clan","Создать клан"],
+search:["Find Clan","Klan Ara","Chercher un clan","Clan suchen","Buscar clan","Найти клан"],
+namePh:["Your name (e.g. Kaan)","İsmin (örn. Kaan)","Ton nom (ex. Kaan)","Dein Name (z. B. Kaan)","Tu nombre (p. ej. Kaan)","Твоё имя (напр. Kaan)"],
+passPh:["Clan password (digits)","Klan şifresi (rakam)","Mot de passe du clan (chiffres)","Clan-Passwort (Ziffern)","Contraseña del clan (dígitos)","Пароль клана (цифры)"],
+passPh2:["Clan password","Klan şifresi","Mot de passe du clan","Clan-Passwort","Contraseña del clan","Пароль клана"],
+build:["Start the clan","Klanı kur","Fonder le clan","Clan gründen","Fundar el clan","Основать клан"],
+join:["Join clan","Klana gir","Rejoindre","Clan beitreten","Unirse al clan","Войти в клан"],
+back:["Back","Geri","Retour","Zurück","Atrás","Назад"],
+leave:["Leave","Ayrıl","Quitter","Verlassen","Salir","Выйти"],
+send:["Send","Gönder","Envoyer","Senden","Enviar","Отправить"],
+msgPh:["Write a message...","Mesaj yaz...","Écris un message...","Nachricht schreiben...","Escribe un mensaje...","Напишите сообщение..."],
+admin:["Admin","Admin","Admin","Admin","Admin","Админ"],
+language:["Language","Dil","Langue","Sprache","Idioma","Язык"],
+enterPass:["Enter password","Şifreye gir","Entrer le mot de passe","Passwort eingeben","Introducir contraseña","Введите пароль"],
+adminPh:["Admin password","Admin şifresi","Mot de passe admin","Admin-Passwort","Contraseña de admin","Пароль админа"],
+login:["Log in","Giriş","Connexion","Anmelden","Entrar","Войти"],
+adminOn:["Admin mode on","Admin modu etkin","Mode admin activé","Admin-Modus aktiv","Modo admin activado","Режим админа включён"],
+adminOff:["Admin mode off","Admin modundan çıkıldı","Mode admin désactivé","Admin-Modus beendet","Modo admin desactivado","Режим админа выключен"],
+wrong:["Wrong password.","Şifre yanlış.","Mot de passe incorrect.","Falsches Passwort.","Contraseña incorrecta.","Неверный пароль."],
+seeClans:["View clans","Klanları gör","Voir les clans","Clans ansehen","Ver clanes","Показать кланы"],
+activeClans:["Active clans","Aktif klanlar","Clans actifs","Aktive Clans","Clanes activos","Активные кланы"],
+close:["Close","Kapat","Fermer","Schließen","Cerrar","Закрыть"],
+noClans:["No active clans right now","Şu an aktif klan yok","Aucun clan actif pour le moment","Derzeit keine aktiven Clans","No hay clanes activos ahora","Сейчас нет активных кланов"],
+members:["members","üye","membres","Mitglieder","miembros","участников"],
+clan:["Clan","Klan","Clan","Clan","Clan","Клан"],
+secret:["secret","gizli","secret","geheim","secreto","тайно"],
+exit:["Exit","Çık","Sortir","Beenden","Salir","Выход"],
+fill:["Enter a name and a password.","İsim ve şifre yaz.","Entre un nom et un mot de passe.","Gib Name und Passwort ein.","Escribe un nombre y una contraseña.","Введите имя и пароль."],
+passExists:["A clan with this password already exists. Please choose another password.","Böyle bir klan şifresi var. Lütfen başka bir şifre oluşturun.","Un clan avec ce mot de passe existe déjà. Choisis-en un autre.","Es gibt bereits einen Clan mit diesem Passwort. Bitte wähle ein anderes.","Ya existe un clan con esta contraseña. Elige otra.","Клан с таким паролем уже существует. Придумайте другой пароль."],
+notFound:["No clan found with this password.","Bu şifreyle bir klan bulunamadı.","Aucun clan trouvé avec ce mot de passe.","Kein Clan mit diesem Passwort gefunden.","No se encontró ningún clan con esta contraseña.","Клан с таким паролем не найден."],
+nameTaken:["This name is already in the clan. Pick another name.","Bu isim klanda zaten var. Başka bir isim seç.","Ce nom est déjà dans le clan. Choisis-en un autre.","Dieser Name ist im Clan schon vergeben. Wähle einen anderen.","Este nombre ya está en el clan. Elige otro.","Это имя уже занято в клане. Выберите другое."],
+gone:["This clan no longer exists","Bu klan artık yok","Ce clan n'existe plus","Dieser Clan existiert nicht mehr","Este clan ya no existe","Этого клана больше нет"],
+created:["{n} created the clan","{n} klanı kurdu","{n} a fondé le clan","{n} hat den Clan gegründet","{n} fundó el clan","{n} основал(а) клан"],
+joined:["{n} joined the clan","{n} klana katıldı","{n} a rejoint le clan","{n} ist dem Clan beigetreten","{n} se unió al clan","{n} вступил(а) в клан"],
+left:["{n} left the clan","{n} klandan ayrıldı","{n} a quitté le clan","{n} hat den Clan verlassen","{n} salió del clan","{n} покинул(а) клан"],
+game:["Game","Oyun","Jeu","Spiel","Juego","Игра"],
+chooseGame:["Choose a game","Bir oyun seç","Choisis un jeu","Wähle ein Spiel","Elige un juego","Выберите игру"],
+ttt:["Tic-Tac-Toe","Tic-Tac-Toe","Morpion","Tic-Tac-Toe","Tres en raya","Крестики-нолики"],
+rps:["Rock Paper Scissors","Taş Kağıt Makas","Pierre Feuille Ciseaux","Schere Stein Papier","Piedra Papel Tijera","Камень Ножницы Бумага"],
+chooseDiff:["Choose difficulty","Zorluk seç","Choisis la difficulté","Wähle den Schwierigkeitsgrad","Elige la dificultad","Выберите сложность"],
+easy:["Easy","Kolay","Facile","Leicht","Fácil","Легко"],
+medium:["Medium","Orta","Moyen","Mittel","Medio","Средне"],
+hard:["Hard","Zor","Difficile","Schwer","Difícil","Сложно"],
+yourTurn:["Your turn (X)","Sıra sende (X)","À toi (X)","Du bist dran (X)","Tu turno (X)","Ваш ход (X)"],
+robotTurn:["Robot is thinking...","Robot düşünüyor...","Le robot réfléchit...","Der Roboter denkt nach...","El robot está pensando...","Робот думает..."],
+youWin:["You win! 🎉","Kazandın! 🎉","Tu as gagné ! 🎉","Du hast gewonnen! 🎉","¡Ganaste! 🎉","Вы победили! 🎉"],
+robotWins:["Robot wins 🤖","Robot kazandı 🤖","Le robot gagne 🤖","Der Roboter gewinnt 🤖","¡Gana el robot! 🤖","Победил робот 🤖"],
+draw:["Draw","Berabere","Égalité","Unentschieden","Empate","Ничья"],
+again:["Play again","Tekrar oyna","Rejouer","Nochmal spielen","Jugar otra vez","Играть снова"],
+pickMove:["Pick your move","Hamleni seç","Choisis ton coup","Wähle deinen Zug","Elige tu jugada","Сделайте выбор"],
+you:["You","Sen","Toi","Du","Tú","Вы"],
+robot:["Robot","Robot","Robot","Roboter","Robot","Робот"],
+drawsLbl:["Draws","Beraberlik","Nuls","Remis","Empates","Ничьи"],
+menu:["Menu","Menü","Menu","Menü","Menú","Меню"]
+};
+var LANG=1;
+try{var sv=parseInt(localStorage.getItem("clans_lang"),10);if(sv>=0&&sv<6)LANG=sv}catch(e){}
+function t(k,n){var s=T[k][LANG];return n!==undefined?s.replace("{n}",n):s}
+
+var $=function(i){return document.getElementById(i)};
+var me=null,spy=null,admin=false;
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}}
+function save(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+function chrome(){
+  var home=$("home").classList.contains("on");
+  $("adminBtn").style.display=$("langBtn").style.display=home?"block":"none";
+  $("seeBtn").style.display=(home&&admin)?"block":"none";
+}
+function show(id){
+  document.querySelectorAll(".view").forEach(function(v){v.classList.remove("on")});
+  $(id).classList.add("on");chrome();
+}
+function toast(s){var e=$("toast");e.textContent=s;e.classList.add("on");setTimeout(function(){e.classList.remove("on")},2400)}
+function hm(ts){return new Date(ts).toLocaleTimeString(CODES[LANG],{hour:"2-digit",minute:"2-digit"})}
+["cPass","sPass"].forEach(function(i){var el=$(i);el.addEventListener("input",function(){el.value=el.value.replace(/\D/g,"")})});
+
+/* ÇEVİRİ (mesajlar için ücretsiz MyMemory servisi) */
+var cache={};
+function trans(text,cb){
+  var k=CODES[LANG]+"|"+text;
+  if(k in cache){if(cache[k])cb(cache[k]);return}
+  if(text.length>450){cache[k]=null;return}
+  cache[k]=null;
+  fetch("https://api.mymemory.translated.net/get?q="+encodeURIComponent(text)+"&langpair=Autodetect|"+CODES[LANG])
+  .then(function(r){return r.json()})
+  .then(function(j){
+    var o=j&&j.responseData&&j.responseData.translatedText;
+    if(j.responseStatus==200&&o&&o.indexOf("MYMEMORY WARNING")<0){
+      var ta=document.createElement("textarea");ta.innerHTML=o;cache[k]=ta.value;render();
+    }
+  }).catch(function(){});
+}
+
+function applyLang(){
+  document.documentElement.lang=CODES[LANG];
+  document.querySelectorAll("[data-i]").forEach(function(e){e.textContent=t(e.dataset.i)});
+  document.querySelectorAll("[data-ph]").forEach(function(e){e.placeholder=t(e.dataset.ph)});
+  render();
+}
+var ll=$("langList");
+NAMES.forEach(function(n,i){
+  var b=document.createElement("button");b.textContent=n;
+  b.onclick=function(){LANG=i;try{localStorage.setItem("clans_lang",i)}catch(e){}applyLang();$("langLayer").classList.remove("on")};
+  ll.appendChild(b);
+});
+$("langBtn").onclick=function(){$("langLayer").classList.add("on")};
+$("langX").onclick=function(){$("langLayer").classList.remove("on")};
+
+/* NAVİGASYON */
+document.querySelectorAll("[data-go]").forEach(function(b){b.addEventListener("click",function(){
+  $("cErr").textContent="";$("sErr").textContent="";show(b.dataset.go)})});
+
+function sys(c,k,n){c.msgs.push({s:1,k:k,n:n,ts:Date.now()})}
+$("cGo").onclick=function(){
+  var n=$("cName").value.trim(),p=$("cPass").value;
+  if(!n||!p){$("cErr").textContent=t("fill");return}
+  var d=load();
+  if(d[p]){$("cErr").textContent=t("passExists");return}
+  d[p]={members:[n],msgs:[]};sys(d[p],"created",n);save(d);enter(p,n);
+};
+$("sGo").onclick=function(){
+  var n=$("sName").value.trim(),p=$("sPass").value;
+  if(!n||!p){$("sErr").textContent=t("fill");return}
+  var d=load();
+  if(!d[p]){$("sErr").textContent=t("notFound");return}
+  if(d[p].members.indexOf(n)>-1){$("sErr").textContent=t("nameTaken");return}
+  d[p].members.push(n);sys(d[p],"joined",n);save(d);enter(p,n);
+};
+function enter(p,n){me={p:p,n:n};render();show("chat");$("cText").focus()}
+
+function paint(box,c,mine){
+  box.innerHTML="";
+  c.msgs.forEach(function(m){
+    var e=document.createElement("div");
+    if(m.s){e.className="sys";e.textContent=m.k?t(m.k,m.n):m.t}
+    else{
+      var own=mine&&m.n===mine;
+      e.className="m"+(own?" me":"");
+      if(!own){var b=document.createElement("b");b.textContent=m.n;e.appendChild(b)}
+      var s=document.createElement("span");
+      var k=CODES[LANG]+"|"+m.t;
+      s.textContent=(cache[k])||m.t;
+      if(!(k in cache))trans(m.t);
+      var i=document.createElement("i");i.textContent=hm(m.ts);
+      e.appendChild(s);e.appendChild(i);
+    }
+    box.appendChild(e);
+  });
+  box.scrollTop=box.scrollHeight;
+}
+function render(){
+  var d=load();
+  if(me){
+    var c=d[me.p];
+    if(!c||c.members.indexOf(me.n)<0){me=null;show("home");return}
+    $("cTitle").textContent=t("clan")+" "+me.p;
+    paint($("cMsgs"),c,me.n);
+  }
+  if(spy){
+    var s=d[spy];
+    if(!s){spy=null;show("home");toast(t("gone"));return}
+    $("spyTitle").textContent=t("clan")+" "+spy+" ("+t("secret")+")";
+    paint($("spyMsgs"),s,null);
+  }
+}
+$("cForm").onsubmit=function(e){
+  e.preventDefault();var x=$("cText").value.trim();if(!x||!me)return;
+  var d=load(),c=d[me.p];if(!c)return;
+  c.msgs.push({n:me.n,t:x,ts:Date.now()});save(d);$("cText").value="";render();
+};
+function leave(){
+  if(!me)return;
+  var d=load(),c=d[me.p];
+  if(c){
+    c.members=c.members.filter(function(x){return x!==me.n});
+    if(!c.members.length)delete d[me.p]; /* herkes çıkınca şifre silinir */
+    else sys(c,"left",me.n);
+    save(d);
+  }
+  me=null;
+}
+$("leave").onclick=function(){leave();$("gameLayer").classList.remove("on");show("home")};
+window.addEventListener("pagehide",leave);
+window.addEventListener("storage",function(e){if(e.key===KEY)render()});
+
+/* ADMIN */
+$("adminBtn").onclick=function(){
+  if(!admin){$("aPass").value="";$("aErr").textContent="";$("adminLayer").classList.add("on");$("aPass").focus()}
+  else{admin=false;$("adminList").classList.remove("on");chrome();toast(t("adminOff"))}
+};
+$("adminX").onclick=function(){$("adminLayer").classList.remove("on")};
+$("aGo").onclick=function(){
+  if($("aPass").value===ADMIN_PASS){admin=true;$("adminLayer").classList.remove("on");chrome();toast(t("adminOn"))}
+  else $("aErr").textContent=t("wrong");
+};
+$("aPass").addEventListener("keydown",function(e){if(e.key==="Enter")$("aGo").click()});
+$("seeBtn").onclick=function(){
+  var d=load(),box=$("clist");box.innerHTML="";
+  var keys=Object.keys(d);
+  if(!keys.length){var p=document.createElement("div");p.className="sys";p.textContent=t("noClans");box.appendChild(p)}
+  keys.forEach(function(k){
+    var b=document.createElement("button");
+    b.textContent=t("clan")+" "+k+" — "+d[k].members.length+" "+t("members");
+    b.onclick=function(){spy=k;$("adminList").classList.remove("on");render();show("spy")}; /* gizli giriş */
+    box.appendChild(b);
+  });
+  $("adminList").classList.add("on");
+};
+$("listBack").onclick=function(){$("adminList").classList.remove("on")};
+$("spyOut").onclick=function(){spy=null;show("home")};
+
+/* OYUNLAR */
+var G={step:"menu"},L3=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]],EM=["✊","✋","✌️"];
+$("gameBtn").onclick=function(){G={step:"menu"};gDraw();$("gameLayer").classList.add("on")};
+$("gameX").onclick=function(){G={step:"menu"};$("gameLayer").classList.remove("on")};
+function gDraw(){
+  var B=$("gBody");B.innerHTML="";
+  function h(tag,txt,cls,fn,par){var e=document.createElement(tag);if(txt!=null)e.textContent=txt;if(cls)e.className=cls;if(fn)e.onclick=fn;(par||B).appendChild(e);return e}
+  if(G.step==="menu"){
+    h("h2",t("chooseGame"));
+    h("button",t("ttt"),"opt",function(){G={step:"diff",game:"ttt"};gDraw()});
+    h("button",t("rps"),"opt",function(){G={step:"diff",game:"rps"};gDraw()});
+  }else if(G.step==="diff"){
+    h("h2",t(G.game));h("div",t("chooseDiff"));
+    ["easy","medium","hard"].forEach(function(d){h("button",t(d),"opt",function(){startGame(G.game,d)})});
+    h("button",t("back"),"back",function(){G={step:"menu"};gDraw()});
+  }else if(G.game==="ttt"){
+    h("h2",t("ttt")+" · "+t(G.d));h("div",t(G.msg));
+    var bd=h("div",null,"board");
+    G.b.forEach(function(v,i){h("button",v,"cell "+v,function(){tttMove(i)},bd)});
+    if(G.over)h("button",t("again"),"opt",function(){startGame("ttt",G.d)});
+    h("button",t("menu"),"back",function(){G={step:"menu"};gDraw()});
+  }else{
+    h("h2",t("rps")+" · "+t(G.d));h("div",t("pickMove"));
+    var r=h("div",null,"rps");
+    EM.forEach(function(e,i){h("button",e,"opt",function(){rpsPlay(i)},r)});
+    if(G.last)h("div",EM[G.last[0]]+"  vs  "+EM[G.last[1]]+"  —  "+t(G.last[2]));
+    h("div",t("you")+" "+G.sc[0]+" · "+t("robot")+" "+G.sc[1]+" · "+t("drawsLbl")+" "+G.sc[2]);
+    h("button",t("menu"),"back",function(){G={step:"menu"};gDraw()});
+  }
+}
+function startGame(g,d){
+  G=g==="ttt"?{step:"play",game:"ttt",d:d,b:["","","","","","","","",""],over:false,busy:false,msg:"yourTurn"}:{step:"play",game:"rps",d:d,hist:[],sc:[0,0,0],last:null};
+  gDraw();
+}
+function win(b){
+  for(var i=0;i<8;i++){var l=L3[i];if(b[l[0]]&&b[l[0]]===b[l[1]]&&b[l[0]]===b[l[2]])return b[l[0]]}
+  return b.indexOf("")<0?"d":null;
+}
+function endCheck(){var w=win(G.b);if(w){G.over=true;G.msg=w==="X"?"youWin":w==="O"?"robotWins":"draw"}}
+function tttMove(i){
+  if(G.over||G.busy||G.b[i])return;
+  G.b[i]="X";endCheck();
+  if(!G.over){G.busy=true;G.msg="robotTurn";setTimeout(robotMove,450)}
+  gDraw();
+}
+function robotMove(){
+  if(!G.b||G.game!=="ttt"||G.over)return;
+  G.b[tttPick(G.b,G.d)]="O";G.busy=false;G.msg="yourTurn";endCheck();gDraw();
+}
+function tttPick(b,d){
+  var em=[];b.forEach(function(v,i){if(!v)em.push(i)});
+  function rnd(){return em[Math.floor(Math.random()*em.length)]}
+  function find(p){for(var j=0;j<em.length;j++){var i=em[j];b[i]=p;var w=win(b)===p;b[i]="";if(w)return i}return -1}
+  if(d==="easy")return rnd();
+  if(d==="medium"){
+    if(Math.random()<.3)return rnd();
+    var a=find("O");if(a>-1)return a;a=find("X");if(a>-1)return a;return rnd();
+  }
+  function mm(turn){
+    var w=win(b);if(w==="O")return 1;if(w==="X")return -1;if(w==="d")return 0;
+    var best=turn==="O"?-2:2;
+    for(var i=0;i<9;i++)if(!b[i]){b[i]=turn;var s=mm(turn==="O"?"X":"O");b[i]="";best=turn==="O"?Math.max(best,s):Math.min(best,s)}
+    return best;
+  }
+  var bi=em[0],bs=-2;
+  em.forEach(function(i){b[i]="O";var s=mm("X");b[i]="";if(s>bs){bs=s;bi=i}});
+  return bi;
+}
+function argmax(a){var m=0;for(var i=1;i<3;i++)if(a[i]>a[m])m=i;return m}
+function rpsPick(){
+  var h=G.hist,rnd=Math.floor(Math.random()*3),d=G.d;
+  function counter(x){return (x+1)%3}
+  if(d==="easy"||h.length<2)return rnd;
+  var f=[0,0,0];h.forEach(function(x){f[x]++});
+  if(d==="medium")return Math.random()<.5?counter(argmax(f)):rnd;
+  if(Math.random()<.1)return rnd;
+  var tr=[[0,0,0],[0,0,0],[0,0,0]];
+  for(var i=1;i<h.length;i++)tr[h[i-1]][h[i]]++;
+  var row=tr[h[h.length-1]];
+  return counter((row[0]+row[1]+row[2])?argmax(row):argmax(f));
+}
+function rpsPlay(i){
+  var r=rpsPick(),res=i===r?2:((i-r+3)%3===1?0:1);
+  G.sc[res]++;G.hist.push(i);G.last=[i,r,["youWin","robotWins","draw"][res]];gDraw();
+}
+
+/* kıvılcım arka planı */
+var cv=$("fx"),cx=cv.getContext("2d"),P=[],W,H;
+function size(){W=cv.width=innerWidth;H=cv.height=innerHeight}
+size();addEventListener("resize",size);
+for(var i=0;i<70;i++)P.push({x:Math.random()*2000,y:Math.random()*1200,r:Math.random()*2+.5,v:Math.random()*.6+.2,h:Math.random()<.7?25:190});
+if(!matchMedia("(prefers-reduced-motion:reduce)").matches)(function loop(){
+  cx.clearRect(0,0,W,H);
+  P.forEach(function(p){
+    p.y-=p.v;p.x+=Math.sin(p.y/60)*.3;
+    if(p.y<-10){p.y=H+10;p.x=Math.random()*W}
+    cx.beginPath();cx.fillStyle="hsla("+p.h+",100%,60%,.7)";cx.shadowColor="hsl("+p.h+",100%,60%)";cx.shadowBlur=10;
+    cx.arc(p.x%W,p.y,p.r,0,6.28);cx.fill();
+  });
+  requestAnimationFrame(loop);
+})();
+
+applyLang();chrome();
+})();
+</script>
+</body>
+      </html>
